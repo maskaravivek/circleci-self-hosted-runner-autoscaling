@@ -1,14 +1,41 @@
-# Welcome to your CDK TypeScript project
+## Auto Scaling CircleCI Self Hosted Runners
 
-This is a blank project for CDK development with TypeScript.
+Scaling CircleCI's self-hosted runners on AWS using AWS CDK. 
 
-The `cdk.json` file tells the CDK Toolkit how to execute your app.
+## CircleCI instructions
 
-## Useful commands
+1. Set up env variables for the project. Add the following variables in your project's env settings. 
 
-* `npm run build`   compile typescript to js
-* `npm run watch`   watch for changes and compile
-* `npm run test`    perform the jest unit tests
-* `cdk deploy`      deploy this stack to your default AWS account/region
-* `cdk diff`        compare deployed stack with current state
-* `cdk synth`       emits the synthesized CloudFormation template
+![Env variables](screenshots/env.png)
+
+2. Trigger Job
+
+## Local instructions
+
+### Prerequisites
+
+- Make sure AWS CLI is installed and configured with credentials
+- [AWS CDK cli](https://docs.aws.amazon.com/cdk/v2/guide/cli.html) is installed
+
+### Steps
+
+1. Install CDK dependencies
+
+```
+npm install
+```
+
+2. Copy `.env.example` to `.env` and fill in the values
+
+3. Set up env variables
+
+```
+export $(cat .env | xargs)
+```
+
+4. Deploy the stack
+
+```
+cdk synth
+cdk deploy
+```
