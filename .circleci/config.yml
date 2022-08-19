@@ -18,6 +18,11 @@ jobs:
           aws-region: AWS_REGION_NAME
       - checkout
       - run:
+          name: 'install_lambda_packages'
+          command: |
+            cd lambda/auto-scaling-lambda && npm install
+            cd ../
+      - run:
           name: 'build'
           command: |
             npm install
