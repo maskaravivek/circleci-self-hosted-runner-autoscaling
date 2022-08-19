@@ -2,6 +2,7 @@ import {
   aws_secretsmanager as secretsmanager,
   aws_events as events,
   aws_ec2 as ec2,
+  aws_lambda as lambda,
   aws_iam as iam,
   aws_autoscaling as autoscaling,
   aws_events_targets as targets,
@@ -51,10 +52,10 @@ export class CircleciSelfHostedRunnerAutoscalingStack extends Stack {
 
     const amiSamParameterName = '/aws/service/canonical/ubuntu/server/focal/stable/current/amd64/hvm/ebs-gp2/ami-id'
     
-    const userDataScript = readFileSync('./scripts/install_runner.sh', 'utf8');
+    let userDataScript = readFileSync('./scripts/install_runner.sh', 'utf8');
     
-    userDataScript.replace('SELF_HOSTED_RUNNER_AUTH_TOKEN', env.SELF_HOSTED_RUNNER_AUTH_TOKEN);
-    userDataScript.replace('SELF_HOSTED_RUNNER_NAME', props!!.runnerName);
+    userDataScript = userDataScript.replace('<SELF_HOSTED_RUNNER_AUTH_TOKEN>', env.SELF_HOSTED_RUNNER_AUTH_TOKEN);
+    userDataScript = userDataScript.replace('<SELF_HOSTED_RUNNER_NAME>', props!!.runnerName);
 
     const ami = ec2.MachineImage.fromSsmParameter(
       amiSamParameterName, {
@@ -70,16 +71,13 @@ export class CircleciSelfHostedRunnerAutoscalingStack extends Stack {
       vpcSubnets: {
         subnetType: ec2.SubnetType.PUBLIC
       },
-      init: ec2.CloudFormationInit.fromElements(
-        ec2.InitCommand.shellCommand('sudo apt-get update -y')
-      ),
-      signals: Signals.waitForMinCapacity(),
       minCapacity: 0,
       maxCapacity: Number(props!!.maxInstances),
     });
 
     circleCiAutoScalingGroup.addUserData(userDataScript);
 
+    console.log(env.SELF_HOSTED_RUNNER_RESOURCE_CLASS, env.CIRCLECI_TOKEN)
     const circleCISecret = new secretsmanager.Secret(this, 'CircleCiSelfHostedRunnerSecret', {
       secretName: 'circleci-self-hosted-runner-secret',
       secretObjectValue: {
@@ -112,11 +110,11 @@ export class CircleciSelfHostedRunnerAutoscalingStack extends Stack {
       ]
     });
 
-    const autoScalingLambda = new PythonFunction(this, 'CircleCiSelfHostedRunnerAutoScalingLambda', {
-      entry: './lambda/auto-scaling-lambda/',
-      runtime: Runtime.PYTHON_3_8,
-      index: 'main.py',
-      handler: 'lambda_handler',
+    const autoScalingLambda = new lambda.Function(this, 'CircleCiSelfHostedRunnerAutoScalingLambda', {
+      functionName: 'CircleCiSelfHostedRunnerAutoScalingLambda',
+      code: lambda.Code.fromAsset('./lambda/auto-scaling-lambda/'),
+      runtime: lambda.Runtime.NODEJS_14_X,
+      handler: "index.handler",
       environment: {
         "SECRET_NAME": circleCISecret.secretName,
         "SECRET_REGION": props?.env?.region || 'us-west-2',
