@@ -18,14 +18,6 @@ jobs:
           aws-region: AWS_REGION_NAME
       - checkout
       - run:
-          name: 'Install Authorizer lambda packages'
-          command: |
-            cd lambda/processJob && npm install
-      - run:
-          name: 'Install Process Job lambda packages'
-          command: |
-            cd lambda/processJob && npm install
-      - run:
           name: 'build'
           command: |
             npm install
