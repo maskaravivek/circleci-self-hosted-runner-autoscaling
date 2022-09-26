@@ -10,9 +10,6 @@ import {
   Stack, SecretValue
 } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
-import { PythonFunction } from '@aws-cdk/aws-lambda-python-alpha';
-import { Runtime } from 'aws-cdk-lib/aws-lambda';
-import { AutoScalingGroup, Signals } from 'aws-cdk-lib/aws-autoscaling';
 import { readFileSync } from 'fs';
 import * as cdk from 'aws-cdk-lib';
 const { env } = require("process");
@@ -52,16 +49,11 @@ export class CircleciSelfHostedRunnerAutoscalingStack extends Stack {
 
     const amiSamParameterName = '/aws/service/canonical/ubuntu/server/focal/stable/current/amd64/hvm/ebs-gp2/ami-id'
     
-    let userDataScript = readFileSync('./scripts/install_runner.sh', 'utf8');
-    
-    userDataScript = userDataScript.replace('<SELF_HOSTED_RUNNER_AUTH_TOKEN>', env.SELF_HOSTED_RUNNER_AUTH_TOKEN);
-    userDataScript = userDataScript.replace('<SELF_HOSTED_RUNNER_NAME>', props!!.runnerName);
-
     const ami = ec2.MachineImage.fromSsmParameter(
       amiSamParameterName, {
       os: ec2.OperatingSystemType.LINUX
     });
-
+    
     const circleCiAutoScalingGroup = new autoscaling.AutoScalingGroup(this, 'CircleCiSelfHostedRunnerASG', {
       vpc: circleCIVpc,
       instanceType: instanceType,
@@ -75,9 +67,13 @@ export class CircleciSelfHostedRunnerAutoscalingStack extends Stack {
       maxCapacity: Number(props!!.maxInstances),
     });
 
+    let userDataScript = readFileSync('./scripts/install_runner.sh', 'utf8');
+    
+    userDataScript = userDataScript.replace('<SELF_HOSTED_RUNNER_AUTH_TOKEN>', env.SELF_HOSTED_RUNNER_AUTH_TOKEN);
+    userDataScript = userDataScript.replace('<SELF_HOSTED_RUNNER_NAME>', props!!.runnerName);
+
     circleCiAutoScalingGroup.addUserData(userDataScript);
 
-    console.log(env.SELF_HOSTED_RUNNER_RESOURCE_CLASS, env.CIRCLECI_TOKEN)
     const circleCISecret = new secretsmanager.Secret(this, 'CircleCiSelfHostedRunnerSecret', {
       secretName: 'circleci-self-hosted-runner-secret',
       secretObjectValue: {
